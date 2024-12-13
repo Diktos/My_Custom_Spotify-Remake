@@ -1,0 +1,404 @@
+﻿<Window x:Class="My_Custom_Spotify_Remake.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:My_Custom_Spotify_Remake"
+        xmlns:system="clr-namespace:System;assembly=mscorlib"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="1000"
+        Loaded="Window_Loaded">
+
+
+    <Window.Resources>
+
+        <local:StateToVisibilityConverter x:Key="stateToVisibilityConverter"/>
+
+        <local:SearchTextToVisibilityMultiConverter x:Key="searchTextToVisibilityMultiConverter"/> <!-- not used  -->
+    
+        <Style x:Key="PlayingTextBlockStyle" TargetType="TextBlock">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding MusicState}" Value="Play">
+                    <Setter Property="Foreground" Value="Green"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        
+        <Style x:Key="LikeButtonStyle" TargetType="Button">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Image Source="/black_heart.png" 
+                               Width="{TemplateBinding Width}" Height="{TemplateBinding Height}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsLiked}" Value="True">
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="Button">
+                                <Image Source="/red_heart.png"
+                                       Width="{TemplateBinding Width}" Height="{TemplateBinding Height}"/>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="RoundedTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Template">
+                <!--Встановлюємо новий шаблон для TextBox-->
+                <Setter.Value>
+                    <!--Встановлюємо значення для проперті шаблону TextBox-->
+                    <ControlTemplate TargetType="TextBox">
+                        <!--Визначає сам шаблон для TextBox-->
+                        <Grid>
+                            <Border  
+                            Background="White" 
+                            BorderBrush="Black" 
+                            BorderThickness="1" 
+                            CornerRadius="15"
+                            Padding="5">
+                                <ScrollViewer
+                        x:Name="PART_ContentHost"
+                        Margin="4"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        FontSize="15"
+                                    />
+                            </Border>
+                            <TextBlock
+                    x:Name="searchText"
+                    Margin="10"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    FontSize="18"
+                    Foreground="Gray"
+                    IsEnabled="False"
+                    Text="🔍 Search" 
+                    Visibility="Visible"
+                                />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding TextIsEmpty}" Value="False">
+                                <Setter TargetName="searchText" Property="Visibility" Value="Hidden" />
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <DataTemplate x:Key="LikedMusicItem_ListBoxItem">
+            <ListBoxItem Height="50" Visibility="{Binding MusicVisibility, Mode=TwoWay}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="50" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Grid.RowSpan="2" VerticalAlignment="Center" FontSize="15" Margin="0,0,5,5"
+                                Text="{Binding NumberInLikedList,Mode=TwoWay}" />
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="5,0,5,0"
+                                Text="{Binding Title}" FontWeight="Bold"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="5,0,5,0"
+                                Text="{Binding Artist}"/>
+
+                    <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="2" Width="29" Height="29" 
+                             Command="{Binding DataContext.LikeOperationCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                             CommandParameter="{Binding}"
+                             Style="{StaticResource LikeButtonStyle}"
+                            Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                            HorizontalAlignment="Center" VerticalAlignment="Center" Margin="10,0,0,0">
+                        <Image Source="/black_heart.png" Width="25" Height="25"/>
+                    </Button>
+                </Grid>
+            </ListBoxItem>
+        </DataTemplate>
+
+        <Style x:Key="RoundedHeaderButtonStyle" TargetType="Button">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                            CornerRadius="25" Width="50" Height="50">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="RoundedButtonStyle" TargetType="Button">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                            CornerRadius="25" Width="35" Height="35">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <DataTemplate x:Key="MusicItem_ListBoxItem">
+            <ListBoxItem Height="50" MouseEnter="ListBoxItem_MouseEnter" MouseLeave="ListBoxItem_MouseLeave" Visibility="{Binding MusicVisibility}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="40" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="175" />
+                        <ColumnDefinition Width="125" />
+                        <ColumnDefinition Width="125" />
+                        <ColumnDefinition Width="50" />
+                        <ColumnDefinition Width="100" />
+                        <ColumnDefinition Width="50" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Button Grid.Row="0" Grid.Column="0" Grid.RowSpan="2" VerticalAlignment="Center"  Margin="0,0,5,5"
+                            Command="{Binding DataContext.mediaElementController.PlayCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
+                            CommandParameter="{Binding}"
+                            Background="Transparent" BorderBrush="Transparent" BorderThickness="0" Width="29" Height="29" 
+                            Visibility="{Binding MusicState, Converter={StaticResource stateToVisibilityConverter}}">
+                        <Image Width="25" Height="25">
+                            <Image.Style>
+                                <Style TargetType="Image">
+                                    <Setter Property="Source" Value="/stopMusic.png" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding MusicState}" Value="Play">
+                                            <Setter Property="Source" Value="/playMusic.png"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding MusicState}" Value="Pause">
+                                            <Setter Property="Source" Value="/stopMusic.png"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Image.Style>
+                        </Image>
+                    </Button>
+
+                    <TextBlock Grid.Row="0" Grid.Column="1" Grid.RowSpan="2" VerticalAlignment="Center" FontSize="15" Margin="0,0,5,5"
+                                Text="{Binding MainNumber,Mode=TwoWay}" />
+                    <TextBlock Grid.Row="0" Grid.Column="2" Margin="5,0,5,0"
+                                Text="{Binding Title}" FontWeight="Bold"
+                                Style="{StaticResource PlayingTextBlockStyle}"
+                               />
+                    <TextBlock Grid.Row="1" Grid.Column="2" Margin="5,0,5,0"
+                                Text="{Binding Artist}" 
+                               Style="{StaticResource PlayingTextBlockStyle}"
+                               />
+                    <TextBlock Grid.Row="0" Grid.Column="3" Grid.RowSpan="2" VerticalAlignment="Center" FontSize="15" Margin="0,0,5,5"
+                                Text="{Binding Album}"
+                               Style="{StaticResource PlayingTextBlockStyle}"
+                               />
+                    <TextBlock Grid.Row="0" Grid.Column="4" Grid.RowSpan="2" VerticalAlignment="Center" FontSize="15" Margin="0,0,5,5"
+                                Text="{Binding Genre}" 
+                               Style="{StaticResource PlayingTextBlockStyle}"
+                               />
+
+                    <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="5" Width="29" Height="29" Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                            Style="{StaticResource LikeButtonStyle}"
+                            Command="{Binding DataContext.LikeOperationCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                            CommandParameter="{Binding}"
+                            HorizontalAlignment="Center" VerticalAlignment="Center" Margin="10,0,0,0">
+                        <Image Source="/blue_heart.png" Width="25" Height="25"/>
+                    </Button>
+
+                    <TextBlock Grid.Row="0" Grid.Column="6" Grid.RowSpan="2" VerticalAlignment="Center" FontSize="15" Margin="8,0,0,0"
+                               HorizontalAlignment="Center" Text="{Binding Duration}"
+                               Style="{StaticResource PlayingTextBlockStyle}"
+                               />
+
+                    <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="7" Width="29" Height="29" Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                            Command="{Binding DataContext.RemoveItemCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" 
+                            CommandParameter="{Binding}"
+                            HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20,0,0,0">
+                        <Image Source="/deleteMusic.png" Width="25" Height="25"/>
+                    </Button>
+                </Grid>
+            </ListBoxItem>
+        </DataTemplate>
+        
+    </Window.Resources>
+
+    <Grid Background="WhiteSmoke">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="100"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="75"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        
+        <!--#region Header-->
+        <Grid Grid.Row="0" Grid.Column="0" Margin="8,10,0,0" Background="DarkGreen" >
+            <TextBlock Text="Liked" HorizontalAlignment="Left" VerticalAlignment="Center"
+                       FontSize="30" Foreground="White" FontWeight="DemiBold" Margin="10,20,20,20"/>
+        </Grid>
+
+        <StackPanel  Grid.Row="0" Grid.Column="1" Margin="8,10,8,0" Background="DarkGreen" Orientation="Horizontal">
+            <TextBlock Text="Songs" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="30" 
+                        Foreground="White" FontWeight="DemiBold" Margin="20"/>
+
+            <Button Style="{StaticResource RoundedHeaderButtonStyle}" 
+                    Command="{Binding OpenOrAddFilesCommand}" Margin="5,0,8,0"
+                    CommandParameter="{x:Static system:Boolean.FalseString}">
+                <Image Height="50" Width="50" Source="/open_button.png" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Button>
+
+            <Button Style="{StaticResource RoundedHeaderButtonStyle}"
+                    Command="{Binding OpenOrAddFilesCommand}" Margin="5,0,0,0"
+                    CommandParameter="{x:Static system:Boolean.TrueString}">
+                <Image Height="50" Width="50" Source="/add_button.png" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Button>
+
+            <TextBox Style="{StaticResource RoundedTextBoxStyle}" Width="220" Height="40" FontSize="15" 
+                     Text="{Binding SearchRequest,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Left" Margin="130,8,0,8"/>
+            
+        </StackPanel>
+        
+        <!--#endregion-->
+        
+        <!--#region MainBlock-->
+        <Grid Grid.Row="1" Grid.Column="0" Margin="8,0,0,0">
+            <ListBox ItemsSource="{Binding LikedItems}"
+                     ItemTemplate="{StaticResource LikedMusicItem_ListBoxItem}" HorizontalContentAlignment="Stretch"/>
+        </Grid>
+
+        <Grid Grid.Row="1" Grid.Column="1" Margin="8,0,8,0">
+            <ListBox ItemsSource="{Binding Items}" 
+                     ItemTemplate="{StaticResource MusicItem_ListBoxItem}" HorizontalContentAlignment="Stretch"/>
+        </Grid>
+        <!--#endregion-->
+
+        <!--#region MediaBlock-->
+
+        <Grid Grid.Row="2" Grid.Column="0" Background="WhiteSmoke">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" >
+                <TextBlock Text="{Binding mediaElementController.CurrentPlayMusicItem.Title}"
+                           Foreground="ForestGreen" FontSize="20" FontWeight="Bold" Margin="8,5,0,0"/>
+            </Grid>
+
+            <Grid Grid.Row="1">
+                <TextBlock Text="{Binding mediaElementController.CurrentPlayMusicItem.Artist}" 
+                           Foreground="Green" FontSize="15" Margin="8,0,0,0"/>
+            </Grid>
+        </Grid>
+
+        <Grid Grid.Row="2" Grid.Column="1" Background="WhiteSmoke">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*" />
+                <ColumnDefinition Width="1*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="100,0,0,0">
+                <TextBlock Text="{Binding mediaElementController.CurrentTimeForViewing}" Margin="0,0,10,0"/>
+                <ProgressBar Grid.Column="1" 
+                         Minimum="0" 
+                         Maximum="{Binding mediaElementController.FileLengthInSeconds}" 
+                         Value="{Binding mediaElementController.CurrentPositionInSeconds}" 
+                         Height="4" Width="300"
+                         />
+                <TextBlock Text="{Binding mediaElementController.MusicLenghtString}" Margin="10,0,0,0"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="30,0,0,0" >
+                <Button Background="Transparent" BorderBrush="Transparent" BorderThickness="0" Margin="5,0,0,0"
+                         Command="{Binding mediaElementController.ShuffleCommand}" 
+                            Style="{StaticResource RoundedButtonStyle}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Image Width="35" Height="35">
+                        <Image.Style>
+                            <Style TargetType="Image">
+                                <Setter Property="Source" Value="/shuffleOff.png" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding mediaElementController.IsShuffling}" Value="True">
+                                        <Setter Property="Source" Value="/shuffleOn.png"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding mediaElementController.IsShuffling}" Value="False">
+                                        <Setter Property="Source" Value="/shuffleOff.png"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Image.Style>
+                    </Image>
+                </Button>
+
+                <Button Background="Transparent" BorderBrush="Transparent" BorderThickness="0"  Margin="5,0,0,0"
+                        Command="{Binding mediaElementController.PrevCommand}" 
+                            Style="{StaticResource RoundedButtonStyle}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Image Source="/prevMusic.png" Width="35" Height="35"/>
+                </Button>
+
+                <Button Background="Transparent" BorderBrush="Transparent" BorderThickness="0" Width="35" Height="35"
+                         Command="{Binding mediaElementController.PlayCommand}" 
+                         CommandParameter="{Binding mediaElementController.CurrentPlayMusicItem}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5,0,0,0">
+                    <Image Width="33" Height="33">
+                        <Image.Style>
+                            <Style TargetType="Image">
+                                <Setter Property="Source" Value="/stopMusic.png" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding mediaElementController.CurrentPlayMusicItem.MusicState}" Value="Play">
+                                        <Setter Property="Source" Value="/playMusic.png"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding mediaElementController.CurrentPlayMusicItem.MusicState}" Value="Pause">
+                                        <Setter Property="Source" Value="/stopMusic.png"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Image.Style>
+                    </Image>
+                </Button>
+
+                <Button Background="Transparent" BorderBrush="Transparent" BorderThickness="0"  Margin="5,0,0,0"
+                          Command="{Binding mediaElementController.NextCommand}" 
+                            Style="{StaticResource RoundedButtonStyle}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Image Source="/nextMusic.png" Width="35" Height="35"/>
+                </Button>
+
+                <Button Background="Transparent" BorderBrush="Transparent" BorderThickness="0"  Margin="5,0,0,0"
+                           Command="{Binding mediaElementController.RepeatCommand}" 
+                            Style="{StaticResource RoundedButtonStyle}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Image Width="35" Height="35">
+                        <Image.Style>
+                            <Style TargetType="Image">
+                                <Setter Property="Source" Value="/repeatOff.png" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding mediaElementController.IsRepeating}" Value="True">
+                                        <Setter Property="Source" Value="/repeatOn.png"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding mediaElementController.IsRepeating}" Value="False">
+                                        <Setter Property="Source" Value="/repeatOff.png"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Image.Style>
+                    </Image>
+                </Button>
+            </StackPanel>
+        </Grid>
+        <!--#endregion-->
+
+        <MediaElement x:Name="mediaElement" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" LoadedBehavior="Manual" />
+    </Grid>
+</Window>
